@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "declaration": true,
+        "target": "ES6",
+        "outDir": "./build",
+        "sourceRoot": "./src",
+        "sourceMap": true,
+        "strict": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true
+    },
+    "exclude": [
+        "./build",
+        "./test/*.test.ts"
+    ]
+}

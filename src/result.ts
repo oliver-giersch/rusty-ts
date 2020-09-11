@@ -1,9 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Result
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 export class Result<T, E> {
-    private constructor(public repr: Ok<T> | Err<E>) {}
+    private constructor(public inner: Ok<T> | Err<E>) { }
 
     static Ok<T, E>(ok: T): Result<T, E> {
         return new Result({ tag: 'ok', value: ok })
@@ -25,17 +25,17 @@ export class Result<T, E> {
         }
     }
 
-    isOk(): this is { repr: Ok<T> } {
-        return this.repr.tag === 'ok'
+    isOk(): this is { inner: Ok<T> } {
+        return this.inner.tag === 'ok'
     }
 
-    isErr(): this is { repr: Err<E> } {
-        return this.repr.tag === 'err'
+    isErr(): this is { inner: Err<E> } {
+        return this.inner.tag === 'err'
     }
 
     or<F>(res: Result<T, F>): Result<T, F> {
         if (this.isOk()) {
-            return Result.Ok(this.repr.value)
+            return Result.Ok(this.inner.value)
         } else {
             return res
         }
@@ -43,24 +43,24 @@ export class Result<T, E> {
 
     orElse<F>(fn: () => Result<T, F>): Result<T, F> {
         if (this.isOk()) {
-            return Result.Ok(this.repr.value)
+            return Result.Ok(this.inner.value)
         } else {
             return fn()
         }
     }
 
     flatten(this: Result<Result<T, E>, E>): Result<T, E> {
-        if (this.isOk()) {
-            return this.repr.value
-        } else if (this.isErr()) {
-            return Result.Err(this.repr.value)
+        switch (this.inner.tag) {
+            case 'ok': return this.inner.value
+            case 'err': return Result.Err(this.inner.value)
         }
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Ok & Err
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tag, Ok, Err
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
+export type Tag = 'ok' | 'err'
 export type Ok<T> = { tag: 'ok', value: T }
 export type Err<E> = { tag: 'err', value: E }

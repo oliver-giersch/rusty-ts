@@ -12,12 +12,10 @@ export function adapt<T>(iter: IterableIterator<T>): Iter<T> {
 // AbstractIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-abstract class AbstractIter<T, U = T> implements IterableIterator<U> {
-    protected constructor(protected iter: IterableIterator<T>) { }
-
-    maybeNext(): Option<U> {
+export abstract class AbstractIter<T> implements IterableIterator<T> {
+    maybeNext(): Option<T> {
         const next = this.next()
-        return !next.done ? Option.Some(next.value) : Option.None()
+        return (!next.done) ? Option.Some(next.value) : Option.None()
     }
 
     count(): number {
@@ -29,19 +27,18 @@ abstract class AbstractIter<T, U = T> implements IterableIterator<U> {
         return count
     }
 
-    last(): Option<U> {
-        let curr = this.maybeNext()
-        let prev = curr
-        while (curr.isSome()) {
+    last(): Option<T> {
+        let curr: Option<T> = Option.None()
+        let prev: Option<T> = Option.None()
+        while ((curr = this.maybeNext()).isSome()) {
             prev = curr
-            curr = this.maybeNext()
         }
 
         return prev
     }
 
-    nth(n: number): Option<U> {
-        let curr: Option<U>
+    nth(n: number): Option<T> {
+        let curr: Option<T>
         while ((curr = this.maybeNext()).isSome() && n > 0) {
             n -= 1
         }
@@ -49,11 +46,23 @@ abstract class AbstractIter<T, U = T> implements IterableIterator<U> {
         return curr
     }
 
-    enumerate(): EnumerateIter<T> {
-        return new EnumerateIter(this.iter)
+    stepBy(step: number): StepByIter<T> {
+        if (step < 0) {
+            throw new Error('step must be >= 0')
+        }
+
+        return new StepByIter(this, step)
     }
 
-    abstract next(): IteratorResult<U>;
+    enumerate(): EnumerateIter<T> {
+        return new EnumerateIter(this)
+    }
+
+    map<V>(fn: (_: T) => V): MapIter<T, V> {
+        return new MapIter(this, fn)
+    }
+
+    abstract next(): IteratorResult<T>;
 
     [Symbol.iterator]() {
         return this
@@ -65,12 +74,8 @@ abstract class AbstractIter<T, U = T> implements IterableIterator<U> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 export class Iter<T> extends AbstractIter<T> {
-    constructor(iter: IterableIterator<T>) {
-        super(iter)
-    }
-
-    map<U>(fn: (_: T) => U): MapIter<T, U> {
-        return new MapIter(this.iter, fn)
+    constructor(private iter: IterableIterator<T>) {
+        super()
     }
 
     next(): IteratorResult<T> {
@@ -82,18 +87,41 @@ export class Iter<T> extends AbstractIter<T> {
 // EnumerateIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export class EnumerateIter<T> extends AbstractIter<T, [number, T]> {
-    private count = 0
-    constructor(iter: IterableIterator<T>) {
-        super(iter)
+export class EnumerateIter<T> extends AbstractIter<[number, T]> {
+    private enumeration = 0
+    constructor(private iter: AbstractIter<T>) {
+        super()
     }
 
     next(): IteratorResult<[number, T]> {
         const next = this.iter.next()
-        const count = this.count++
+        const enumeration = this.enumeration++
         return {
             done: next.done,
-            value: [count, next.value]
+            value: [enumeration, next.value]
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// StepByIter
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class StepByIter<T> extends AbstractIter<T> {
+    private current = -1;
+    constructor(private iter: AbstractIter<T>, private step: number) {
+        super()
+    }
+
+    next(): IteratorResult<T> {
+        while (true) {
+            let curr = this.iter.next()
+            if (curr.done || this.current < 0 || this.current == this.step) {
+                this.current += 1
+                return curr
+            }
+
+            this.current += 1
         }
     }
 }
@@ -102,9 +130,9 @@ export class EnumerateIter<T> extends AbstractIter<T, [number, T]> {
 // MapIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export class MapIter<T, U> extends AbstractIter<T, U> {
-    constructor(iter: IterableIterator<T>, private fn: (_: T) => U) {
-        super(iter)
+export class MapIter<T, U> extends AbstractIter<U> {
+    constructor(private iter: AbstractIter<T>, private fn: (_: T) => U) {
+        super()
     }
 
     next(): IteratorResult<U> {

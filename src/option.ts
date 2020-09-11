@@ -5,14 +5,19 @@ import { Iter } from './iter'
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 export class Option<T> {
-    private constructor(public inner: T | undefined) { }
+    public inner: T | undefined
+    private constructor(inner?: T) {
+        if (typeof inner !== 'undefined') {
+            this.inner = inner
+        }
+    }
 
     static Some<T>(value: T): Option<T> {
         return new Option(value)
     }
 
     static None<T>(): Option<T> {
-        return new Option(undefined)
+        return new Option()
     }
 
     static from<T>(maybe: T | undefined | null): Option<T> {
