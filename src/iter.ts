@@ -1,4 +1,4 @@
-import { Option } from './option'
+import { Option } from './internal'
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // adapt
@@ -54,12 +54,43 @@ export abstract class AbstractIter<T> implements IterableIterator<T> {
         return new StepByIter(this, step)
     }
 
+    chain(other: AbstractIter<T>): ChainIter<T> {
+        return new ChainIter(this, other)
+    }
+
+    zip<U>(other: AbstractIter<U>): ZipIter<T, U> {
+        return new ZipIter(this, other)
+    }
+
+    map<U>(fn: (_: T) => U): MapIter<T, U> {
+        return new MapIter(this, fn)
+    }
+
+    forEach(fn: (_: T) => void) {
+        for (const elem of this) {
+            fn(elem)
+        }
+    }
+
+    filter(fn: (_: T) => boolean): FilterIter<T> {
+        return new FilterIter(this, fn)
+    }
+
+    filterMap<U>(fn: (_: T) => Option<U>): FilterMapIter<T, U> {
+        return new FilterMapIter(this, fn)
+    }
+
     enumerate(): EnumerateIter<T> {
         return new EnumerateIter(this)
     }
 
-    map<V>(fn: (_: T) => V): MapIter<T, V> {
-        return new MapIter(this, fn)
+    collect(): T[] {
+        let res = []
+        for (const elem of this) {
+            res.push(elem)
+        }
+
+        return res
     }
 
     abstract next(): IteratorResult<T>;
@@ -127,6 +158,55 @@ export class StepByIter<T> extends AbstractIter<T> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+// ZipIter
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class ZipIter<T, U> extends AbstractIter<[T, U]> {
+    constructor(private a: AbstractIter<T>, private b: AbstractIter<U>) {
+        super()
+    }
+
+    next(): IteratorResult<[T, U]> {
+        const a = this.a.next()
+        if (a.done === true) {
+            return { done: true, value: null }
+        }
+
+        const b = this.b.next()
+        if (b.done === true) {
+            return { done: true, value: null }
+        }
+
+        return { done: false, value: [a.value, b.value] }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// ChainIter
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class ChainIter<T> extends AbstractIter<T> {
+    private flip = false
+    constructor(private a: AbstractIter<T>, private b: AbstractIter<T>) {
+        super()
+    }
+
+    next(): IteratorResult<T> {
+        if (!this.flip) {
+            const next = this.a.next()
+            if (next.done === false) {
+                return next
+            } else {
+                this.flip = true
+                return this.next()
+            }
+        } else {
+            return this.b.next()
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // MapIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -141,5 +221,48 @@ export class MapIter<T, U> extends AbstractIter<U> {
             done: next.done,
             value: this.fn(next.value)
         }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// FilterIter
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class FilterIter<T> extends AbstractIter<T> {
+    constructor(private iter: AbstractIter<T>, private fn: (_: T) => boolean) {
+        super()
+    }
+
+    next(): IteratorResult<T> {
+        let next
+        while (!(next = this.iter.next()).done) {
+            if (this.fn(next.value)) {
+                return next
+            }
+        }
+
+        return next
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// FilterMapIter
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class FilterMapIter<T, U> extends AbstractIter<U> {
+    constructor(private iter: AbstractIter<T>, private fn: (_: T) => Option<U>) {
+        super()
+    }
+
+    next(): IteratorResult<U> {
+        let next
+        while (!(next = this.iter.next()).done) {
+            const res = this.fn(next.value)
+            if (res.isSome()) {
+                return { done: false, value: res.inner }
+            }
+        }
+
+        return next
     }
 }

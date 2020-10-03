@@ -1,4 +1,4 @@
-import { Iter } from './iter'
+import { AbstractIter } from './internal'
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Option
@@ -7,7 +7,7 @@ import { Iter } from './iter'
 export class Option<T> {
     public inner: T | undefined
     private constructor(inner?: T) {
-        if (typeof inner !== 'undefined') {
+        if (inner !== undefined) {
             this.inner = inner
         }
     }
@@ -20,16 +20,20 @@ export class Option<T> {
         return new Option()
     }
 
-    static from<T>(maybe: T | undefined | null): Option<T> {
-        return maybe ? Option.Some(maybe) : Option.None()
+    static from<T>(maybe?: T | undefined | null): Option<T> {
+        if (maybe === null || maybe === undefined) {
+            return Option.None()
+        } else {
+            return Option.Some(maybe)
+        }
     }
 
     isSome(): this is { inner: T } {
-        return typeof this.inner !== 'undefined'
+        return this.inner !== undefined
     }
 
     isNone(): this is { inner: undefined } {
-        return typeof this.inner === 'undefined'
+        return this.inner === undefined
     }
 
     unwrap(): T {
@@ -54,8 +58,16 @@ export class Option<T> {
         return res
     }
 
-    iter(): Iter<T> {
-        throw new Error('unimplemented')
+    iter(): OptionIter<T> {
+        return new OptionIter(this)
+    }
+
+    match<R>(some: (_: T) => R, none: () => R) {
+        if (this.isSome()) {
+            return some(this.inner)
+        } else {
+            return none()
+        }
     }
 
     flatten(this: Option<Option<T>>): Option<T> {
@@ -77,19 +89,13 @@ export class NoneError extends Error {
 // OptionIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export class OptionIter<T> implements IterableIterator<T> {
-    constructor(private option: Option<T>) { }
+export class OptionIter<T> extends AbstractIter<T> {
+    constructor(private option: Option<T>) {
+        super()
+    }
 
     next(): IteratorResult<T> {
         const res = this.option.take()
-        if (res.isSome()) {
-            return { done: false, value: res.inner }
-        } else {
-            return { done: true, value: null }
-        }
-    }
-
-    [Symbol.iterator]() {
-        return this
+        return res.isSome() ? { done: false, value: res.inner } : { done: true, value: null }
     }
 }

@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 
-import { adapt, Iter } from '../src/iter'
-import { Option } from '../src/option'
+import { adapt, Iter } from '../src/internal'
+import { Option } from '../src/internal'
 
 function buildIter(): Iter<number> {
     return adapt([0, 1, 2, 3, 4, 5].values())
@@ -55,5 +55,14 @@ describe('testing "iter" module', () => {
             expect(elem).to.eq(cmp)
             cmp += 3
         }
+    })
+    it('testing "filter"', () => {
+        const iter = buildIter()
+        let arr = []
+        for (const elem of iter.filter(i => i % 2 == 0)) {
+            arr.push(elem)
+        }
+
+        expect(arr).to.deep.eq([0, 2, 4])
     })
 })
