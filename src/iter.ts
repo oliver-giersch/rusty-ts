@@ -1,4 +1,5 @@
-import { Option } from './internal'
+
+import { Opt, Option } from './facade'
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // adapt
@@ -15,7 +16,7 @@ export function adapt<T>(iter: IterableIterator<T>): Iter<T> {
 export abstract class AbstractIter<T> implements IterableIterator<T> {
     maybeNext(): Option<T> {
         const next = this.next()
-        return (!next.done) ? Option.Some(next.value) : Option.None()
+        return (!next.done) ? Opt.Some(next.value) : Opt.None()
     }
 
     count(): number {
@@ -28,8 +29,8 @@ export abstract class AbstractIter<T> implements IterableIterator<T> {
     }
 
     last(): Option<T> {
-        let curr: Option<T> = Option.None()
-        let prev: Option<T> = Option.None()
+        let curr: Option<T> = Opt.None()
+        let prev: Option<T> = Opt.None()
         while ((curr = this.maybeNext()).isSome()) {
             prev = curr
         }
@@ -259,7 +260,7 @@ export class FilterMapIter<T, U> extends AbstractIter<U> {
         while (!(next = this.iter.next()).done) {
             const res = this.fn(next.value)
             if (res.isSome()) {
-                return { done: false, value: res.inner }
+                return { done: false, value: res.val }
             }
         }
 

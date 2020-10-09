@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 
-import { adapt, Iter } from '../src/internal'
-import { Option } from '../src/internal'
+import { adapt, Iter } from '../src/facade'
+import { Option, Opt } from '../src/facade'
 
 function buildIter(): Iter<number> {
     return adapt([0, 1, 2, 3, 4, 5].values())
@@ -20,21 +20,21 @@ describe('testing "iter" module', () => {
     it('testing "maybeNext" manual', () => {
         const iter = buildIter()
 
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(0))
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(1))
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(2))
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(3))
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(4))
-        expect(iter.maybeNext()).to.deep.eq(Option.Some(5))
-        expect(iter.maybeNext()).to.deep.eq(Option.None())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(0).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(1).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(2).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(3).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(4).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(5).toObj())
+        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.None().toObj())
     })
     it('testing "maybeNext" loop', () => {
         const iter = buildIter()
 
         let cmp = 0
-        let curr: Option<number> = Option.None()
+        let curr: Option<number> = Opt.None()
         while ((curr = iter.maybeNext()).isSome()) {
-            expect(curr.inner).to.eq(cmp)
+            expect(curr.val).to.eq(cmp)
             cmp += 1
         }
 
@@ -46,7 +46,7 @@ describe('testing "iter" module', () => {
     })
     it('testing "last"', () => {
         const iter = buildIter()
-        expect(iter.last()).to.deep.eq(Option.Some(5))
+        expect(iter.last().toObj()).to.deep.eq(Opt.Some(5).toObj())
     })
     it('testing "map"', () => {
         const iter = buildIter();
