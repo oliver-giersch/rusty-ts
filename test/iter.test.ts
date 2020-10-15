@@ -20,13 +20,13 @@ describe('testing "iter" module', () => {
     it('testing "maybeNext" manual', () => {
         const iter = buildIter()
 
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(0).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(1).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(2).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(3).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(4).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.Some(5).toObj())
-        expect(iter.maybeNext().toObj()).to.deep.eq(Opt.None().toObj())
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(0))
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(1))
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(2))
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(3))
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(4))
+        expect(iter.maybeNext()).to.deep.eq(Opt.Some(5))
+        expect(iter.maybeNext()).to.deep.eq(Opt.None())
     })
     it('testing "maybeNext" loop', () => {
         const iter = buildIter()
@@ -46,7 +46,7 @@ describe('testing "iter" module', () => {
     })
     it('testing "last"', () => {
         const iter = buildIter()
-        expect(iter.last().toObj()).to.deep.eq(Opt.Some(5).toObj())
+        expect(iter.last()).to.deep.eq(Opt.Some(5))
     })
     it('testing "map"', () => {
         const iter = buildIter();
