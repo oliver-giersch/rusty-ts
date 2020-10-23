@@ -1,19 +1,19 @@
 
-import { Opt, Option } from './facade'
+//import { Opt, Option } from './facade'
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // adapt
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export function adapt<T>(iter: IterableIterator<T>): Iter<T> {
-    return new Iter(iter)
-}
+//export function adapt<T>(iter: IterableIterator<T>): Iter<T> {
+//    return new Iter(iter)
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // AbstractIter
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export abstract class AbstractIter<T> implements IterableIterator<T> {
+/*export abstract class AbstractIter<T> implements IterableIterator<T> {
     maybeNext(): Option<T> {
         const next = this.next()
         return (!next.done) ? Opt.Some(next.value) : Opt.None()
@@ -266,4 +266,4 @@ export class FilterMapIter<T, U> extends AbstractIter<U> {
 
         return next
     }
-}
+}*/

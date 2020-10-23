@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 
-import { Res, Result } from '../src/facade'
+import { Result, UnwrapError } from '../src/lib'
 
 function arrayGet<T>(arr: T[], idx: number): T {
     if (idx < 0 || !Number.isInteger(idx)) {
@@ -14,12 +14,19 @@ function arrayGet<T>(arr: T[], idx: number): T {
     return arr[idx]
 }
 
+const buildRes: (_: number | string) => Result<number, string> = (arg) => {
+    switch (typeof arg) {
+        case 'number': return Result.Ok(arg)
+        case 'string': return Result.Err(arg)
+    }
+}
+
 describe('module "option"', () => {
     it('testing "tryCatch"', () => {
         const arr = [0, 1, 2, 3, 4]
 
         // catch error 1
-        const res1 = Res.tryCatch(() => arrayGet(arr, 100), RangeError)
+        const res1 = Result.tryCatch(() => arrayGet(arr, 100), RangeError)
         expect(res1.isErr()).to.eq(true)
         if (res1.isErr()) {
             expect(res1.err.message).to.eq('idx is out of bounds or arr')
@@ -28,7 +35,7 @@ describe('module "option"', () => {
         }
 
         // catch error 2
-        const res2 = Res.tryCatch(() => arrayGet(arr, -1), RangeError)
+        const res2 = Result.tryCatch(() => arrayGet(arr, -1), RangeError)
         expect(res2.isErr()).to.eq(true)
         if (res2.isErr()) {
             expect(res2.err.message).to.eq('idx must be a non-negative integer')
@@ -37,41 +44,71 @@ describe('module "option"', () => {
         }
 
         // error not caught, re-thrown
-        const fn = () => Res.tryCatch(() => arrayGet(arr, -1), TypeError)
+        const fn = () => Result.tryCatch(() => arrayGet(arr, -1), TypeError)
         expect(fn).throws(RangeError)
 
         // no error thrown
-        const res3 = Res.tryCatch(() => arrayGet(arr, 2), Error)
-        expect(res3).to.deep.eq(Res.Ok(2))
+        const res3 = Result.tryCatch(() => arrayGet(arr, 2), Error)
+        expect(res3).to.deep.eq(Result.Ok(2))
         expect(res3.isOk()).to.eq(true)
 
         // catch polymorphic error
-        const res4 = Res.tryCatch(() => arrayGet(arr, 100), Error)
+        const res4 = Result.tryCatch(() => arrayGet(arr, 100), Error)
         expect(res4.isErr()).to.eq(true)
         if (res4.isErr()) {
             expect(res4.err instanceof RangeError).to.eq(true)
         }
     })
-    it('testing "isOk", "isErr', () => {
-        const ok = Res.Ok(10)
-        expect(ok.isOk()).to.eq(true)
-        expect(ok.isErr()).to.eq(false)
-        if (ok.isOk()) {
-            expect(ok.val).to.eq(10)
-        }
+    it('testing "isOk"', () => {
+        expect(buildRes(100).isOk()).to.eq(true)
+        expect(buildRes('o').isOk()).to.eq(false)
 
-        const err = Res.Err('error')
-        expect(err.isOk()).to.eq(false)
+        // ensure that narrowing works as expected
+        const ok = buildRes(22)
+        expect(ok.isOk()).to.eq(true)
+        if (ok.isOk()) {
+            expect(ok.val).to.eq(22)
+        }
+    })
+    it('testing "isErr"', () => {
+        expect(buildRes(100).isErr()).to.eq(false)
+        expect(buildRes('o').isErr()).to.eq(true)
+
+        // ensure that narrowing works as expected
+        const err = buildRes('error')
         expect(err.isErr()).to.eq(true)
         if (err.isErr()) {
             expect(err.err).to.eq('error')
         }
+
     })
     it('testing "match"', () => {
-        const res1 = Res.Ok(1)
-        const res2 = Res.Err('error')
-
-        expect(res1.match(n => n, _ => 100)).to.eq(1)
-        expect(res2.match(n => n, _ => 100)).to.eq(100)
+        expect(buildRes(1).match(n => n, _ => 100)).to.eq(1)
+        expect(buildRes('error').match(n => n, _ => 100)).to.eq(100)
+    })
+    it('testing "map"', () => {
+        expect(buildRes(1).map(n => n * 2)).to.deep.eq(Result.Ok(2))
+        expect(buildRes('bad').map(n => n * 2)).to.deep.eq(Result.Err('bad'))
+    })
+    it('testing "mapOr"', () => {
+        expect(buildRes(2).mapOr(100, n => n * 40)).to.eq(80)
+        expect(buildRes('err').mapOr(100, n => n * 40)).to.eq(100)
+    })
+    it('testing "and"', () => {
+        expect(Result.Ok(20).and(Result.Ok('success'))).to.deep.eq(Result.Ok('success'))
+        expect(Result.Ok(20).and(Result.Err('failure'))).to.deep.eq(Result.Err('failure'))
+        expect(Result.Err('bad').and(Result.Ok(50))).to.deep.eq(Result.Err('bad'))
+        expect(Result.Err('bad').and(Result.Err('error'))).to.deep.eq(Result.Err('bad'))
+    })
+    it('testing "andThen"', () => {
+        const lessThanTen: (n: number) => Result<string, number> =
+            n => n < 10 ? Result.Ok('less than 10') : Result.Err(n)
+        expect(Result.Ok(10).andThen(lessThanTen)).to.deep.eq(Result.Err(10))
+        expect(Result.Ok(5).andThen(lessThanTen)).to.deep.eq(Result.Ok('less than 10'))
+        expect(Result.Err(Number.NaN).andThen(lessThanTen)).to.deep.eq(Result.Err(Number.NaN))
+    })
+    it('testing "unwrap"', () => {
+        expect(Result.Ok(10).unwrap()).to.deep.eq(10)
+        expect(() => Result.Err('bad').unwrap()).to.throw(UnwrapError)
     })
 })

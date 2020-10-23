@@ -1,53 +1,124 @@
-import { Opt, Option } from './facade'
-
-/********** exports ******************************************************************************/
-
-export {
-    Ok,
-    Err,
-    tryCatch
-}
+import { Option } from './lib'
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Result
+// ResultBase
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export type Result<T, E> = (Ok<T> | Err<E>) & IResult<T, E>
+abstract class ResultBase<T, E> {
+    protected constructor() { }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// IResult
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    isOk(this: Result<T, E>): this is Ok<T, never> {
+        return this.tag === Tag.Ok
+    }
 
-export interface IResult<T, E> {
-    isOk(): this is Ok<T>,
-    isErr(): this is Err<E>,
-    match<R>(ok: (_: T) => R, err: (_: E) => R): R,
-    map<U>(fn: (_: T) => U): Result<U, E>,
-    mapOr<U>(def: U, fn: (_: T) => U): U,
-    mapOrElse<U>(def: () => U, fn: (_: T) => U): U,
-    and<U>(res: Result<U, E>): Result<U, E>,
-    andThen<U>(fn: (_: T) => Result<U, E>): Result<U, E>,
-    or<F>(res: Result<T, F>): Result<T, F>,
-    orElse<F>(fn: (_: E) => Result<T, F>): Result<T, F>,
-    ok(): Option<T>,
-    err(): Option<E>,
-    unwrapOr(def: T): T,
-    unwrapOrElse(def: () => T): T,
-    unwrap(): T,
-    unwrapErr(): E,
-    flatten(this: Result<Result<T, E>, E>): Result<T, E>
-}
+    isErr(this: Result<T, E>): this is Err<never, E> {
+        return this.tag === Tag.Err
+    }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// UnwrapError
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    match<R>(this: Result<T, E>, ok: (_: T) => R, err: (_: E) => R): R {
+        switch (this.tag) {
+            case Tag.Ok: return ok(this.val)
+            case Tag.Err: return err(this.err)
+        }
+    }
 
-export class UnwrapError<E> extends Error {
-    constructor(public reason: E, cause: Tag) {
-        super(cause === Tag.Ok
-            ? `'unwrap' called on 'Err' variant with: ${reason}`
-            : `'unwrapErr' called on 'Ok' variant with: ${reason}`
-        )
+    map<U>(this: Result<T, E>, fn: (_: T) => U): Result<U, E> {
+        switch (this.tag) {
+            case Tag.Ok: return Result.Ok(fn(this.val))
+            case Tag.Err: return this as unknown as Result<U, E>
+        }
+    }
+
+    mapOr<U>(this: Result<T, E>, def: U, fn: (_: T) => U): U {
+        return this.match(ok => fn(ok), _ => def)
+    }
+
+    mapOrElse<U>(this: Result<T, E>, def: () => U, fn: (_: T) => U): U {
+        return this.match(ok => fn(ok), _ => def())
+    }
+
+    and<U>(this: Result<T, E>, res: Result<U, E>): Result<U, E> {
+        switch (this.tag) {
+            case Tag.Ok: return res
+            case Tag.Err: return this as unknown as Result<U, E>
+        }
+    }
+
+    andThen<U>(this: Result<T, E>, fn: (_: T) => Result<U, E>) {
+        switch (this.tag) {
+            case Tag.Ok: return fn(this.val)
+            case Tag.Err: return this as unknown as Result<U, E>
+        }
+    }
+
+    or<F>(this: Result<T, E>, res: Result<T, F>): Result<T, F> {
+        switch (this.tag) {
+            case Tag.Ok: return this as unknown as Result<T, F>
+            case Tag.Err: return res
+        }
+    }
+
+    orElse<F>(this: Result<T, E>, fn: (_: E) => Result<T, F>): Result<T, F> {
+        switch (this.tag) {
+            case Tag.Ok: return this as unknown as Result<T, F>
+            case Tag.Err: return fn(this.err)
+        }
+    }
+
+    toOk(this: Result<T, E>): Option<T> {
+        switch (this.tag) {
+            case Tag.Ok: return Option.Some(this.val)
+            case Tag.Err: return Option.None
+        }
+    }
+
+    toErr(this: Result<T, E>): Option<E> {
+        switch (this.tag) {
+            case Tag.Ok: return Option.None
+            case Tag.Err: return Option.Some(this.err)
+        }
+    }
+
+    unwrap(this: Result<T, E>): T | never {
+        switch (this.tag) {
+            case Tag.Ok: return this.val
+            case Tag.Err: throw new UnwrapError(this.err, Tag.Ok)
+        }
+    }
+
+    unwrapOr(this: Result<T, E>, def: T): T {
+        switch (this.tag) {
+            case Tag.Ok: return this.val
+            case Tag.Err: return def
+        }
+    }
+
+    unwrapOrElse(this: Result<T, E>, def: () => T): T {
+        switch (this.tag) {
+            case Tag.Ok: return this.val
+            case Tag.Err: return def()
+        }
+    }
+
+    unwrapErr(this: Result<T, E>): E | never {
+        switch (this.tag) {
+            case Tag.Ok: throw new UnwrapError(this.val, Tag.Err)
+            case Tag.Err: return this.err
+        }
+    }
+
+    expect(this: Result<T, E>, msg: string): T | never {
+        switch (this.tag) {
+            case Tag.Ok: return this.val
+            case Tag.Err: throw new ExpectError(this.err, msg)
+        }
+    }
+
+    flatten(this: Result<Result<T, E>, E>): Result<T, E> {
+        switch (this.tag) {
+            case Tag.Ok: return this.val
+            case Tag.Err: return Result.Err(this.err)
+        }
     }
 }
 
@@ -55,77 +126,78 @@ export class UnwrapError<E> extends Error {
 // Tag
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export const enum Tag {
-    Ok,
-    Err,
-}
+export const enum Tag { Ok, Err }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Ok & Err
+// Ok
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type Ok<T> = { readonly tag: Tag.Ok, readonly val: T }
-type Err<E> = { readonly tag: Tag.Err, readonly err: E }
+export class Ok<T, E> extends ResultBase<T, E> {
+    readonly tag: Tag.Ok
+    readonly val: T
 
-/********** exported functions ********************************************************************/
+    static from<T, E>(val: T): Ok<T, E> {
+        return new Ok(val)
+    }
 
-function Ok<T, E = never>(val: T): Result<T, E> {
-    return from({ tag: Tag.Ok, val })
-}
-
-function Err<T, E>(err: E): Result<T, E> {
-    return from({ tag: Tag.Err, err })
-}
-
-function tryCatch<T, E extends Error>(fn: () => T, err: new (...args: any[]) => E): Result<T, E> {
-    try {
-        return Ok(fn())
-    } catch (e) {
-        if (e instanceof err) {
-            return Err(e)
-        }
-
-        throw e
+    private constructor(val: T) {
+        super()
+        this.tag = Tag.Ok
+        this.val = val
     }
 }
 
-/********** internal functions ********************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Err
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function from<T, E>(repr: Ok<T> | Err<E>): Result<T, E> {
-    const res = Object.create(prototype)
-    res.tag = repr.tag
-    if (repr.tag === Tag.Ok) {
-        res.val = repr.val
-    } else {
-        res.err = repr.err
+export class Err<T, E> extends ResultBase<T, E> {
+    readonly tag: Tag.Err
+    readonly err: E
+
+    static from<T, E>(err: E): Err<T, E> {
+        return new Err(err)
     }
 
-    return res
+    private constructor(err: E) {
+        super()
+        this.tag = Tag.Err
+        this.err = err
+    }
 }
 
-const prototype: IResult<any, any> = {
-    isOk(this: Result<any, any>) { return this.tag === Tag.Ok },
-    isErr(this: Result<any, any>) { return this.tag === Tag.Err },
-    match(this: Result<any, any>, ok, err) {
-        switch (this.tag) {
-            case Tag.Ok: return ok(this.val)
-            case Tag.Err: return err(this.err)
-        }
-    },
-    map(fn) { return this.match(val => Ok(fn(val)), err => Err(err)) },
-    mapOr(def, fn) { return this.match(val => fn(val), _ => def) },
-    mapOrElse(def, fn) { return this.match(val => fn(val), _ => def()) },
-    and(res) { return this.match(_ => res, err => Err(err)) },
-    andThen(fn) { return this.match(ok => fn(ok), err => Err(err)) },
-    or<F>(res: Result<any, F>) { return this.match(ok => Ok<any, F>(ok), _ => res) },
-    orElse<F>(fn: (_: any) => Result<any, F>) {
-        return this.match(ok => Ok<any, F>(ok), err => fn(err))
-    },
-    ok() { return this.match(ok => Opt.Some(ok), _ => Opt.None()) },
-    err() { return this.match(_ => Opt.None(), err => Opt.Some(err)) },
-    unwrapOr(def) { return this.match(ok => ok, _ => def) },
-    unwrapOrElse(def) { return this.match(ok => ok, _ => def()) },
-    unwrap() { return this.match(ok => ok, err => { throw new UnwrapError(err, Tag.Ok) }) },
-    unwrapErr() { return this.match(ok => { throw new UnwrapError(ok, Tag.Err) }, err => err) },
-    flatten() { return this.match(res => res, err => Err(err)) }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Result
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export type Result<T, E> = Ok<T, E> | Err<T, E>
+export const Result = Object.freeze({
+    Ok<T, E>(val: T): Result<T, E> { return Ok.from(val) },
+    Err<T, E>(err: E): Result<T, E> { return Err.from(err) },
+    tryCatch<T, E>(fn: () => T, err: new (...args: any[]) => E): Result<T, E> {
+        throw new Error('unimplemented')
+    }
+})
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// UnwrapError
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class UnwrapError<T> extends Error {
+    constructor(public val: T, expected: Tag) {
+        super(expected === Tag.Ok
+            ? 'called `unwrap` on an `Result.Err` value: ' + val
+            : 'called `unwrapErr` on an `Result.Ok` value: ' + val
+        )
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// ExpectError
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export class ExpectError<T> extends Error {
+    constructor(public val: T, msg: string) {
+        super(msg + ': ' + val)
+    }
 }
