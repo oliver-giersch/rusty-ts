@@ -4,26 +4,26 @@ import { Result, ResultTag } from './lib'
 // OptionBase
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Method prototypes for instances of the (union) {@link Option} type.
- */
+/** Method prototypes for instances of the (union) {@link Option} type. */
 abstract class OptionBase<T> {
+    // can only be constructed by deriving classes
     protected constructor() { }
 
     /**
      * Returns `true` if the {@link Option} instance is a {@link Some} variant.
      *
-     * # Example
+     * ## Example
      *
      * Using the `isSome` type guard to narrow the {@link Option} variant allows directly accessing
      * the contained value:
      *
-     * ```ts
+     * ```typescript
      * declare function getOption(): Option<string>
      *
-     * if (getOption().isSome()) {
+     * const opt = getOption()
+     * if (opt.isSome()) {
      *     // not possible before narrowing!
-     *     console.log(option.val)
+     *     console.log(opt.val)
      * }
      * ```
      *
@@ -140,8 +140,8 @@ abstract class OptionBase<T> {
     }
 
     /**
-     * Performs a logical *and* on this and `other`, returning `other` if both are {@link Some} and
-     * {@link None} otherwise.
+     * Performs a logical *and* on `this` and `other`, returning `other` if both are {@link Some}
+     * and {@link None} otherwise.
      *
      * @param this
      * @param other
@@ -153,6 +153,13 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Performs a logical *and* on `this`, returning the {@link Option} returned by `fn`, if there
+     * is a contained value or {@link None} otherwise.
+     *
+     * @param this
+     * @param fn the function generating the alternative {@link Option}
+     */
     andThen<U>(this: Option<T>, fn: (_: T) => Option<U>): Option<U> {
         switch (this.tag) {
             case Tag.Some: return fn(this.val)
@@ -160,6 +167,13 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Performs a logical *or* on `this` and `other`, returning `other` if `this` is a {@link None}
+     * variant.
+     *
+     * @param this
+     * @param other the {@link Option} to compare to
+     */
     or(this: Option<T>, other: Option<T>): Option<T> {
         switch (this.tag) {
             case Tag.Some: return this
@@ -167,6 +181,13 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Performs a logical *or* on `this`, returning the {@link Option} returned by `fn`, if `this`
+     * is a {@link None} variant.
+     *
+     * @param this
+     * @param fn the function generating the alternative {@link Option}
+     */
     orElse(this: Option<T>, fn: () => Option<T>): Option<T> {
         switch (this.tag) {
             case Tag.Some: return this
@@ -175,7 +196,7 @@ abstract class OptionBase<T> {
     }
 
     /**
-     * Returns the contained value or throws a {@link NoneError} exception.
+     * Returns the contained value, if there is one, or throws a {@link NoneError} exception.
      *
      * @param this
      * @returns the contained value
@@ -188,6 +209,12 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Returns the contained value, if there is one, or returns the given `def` value.
+     *
+     * @param this
+     * @param def the default value
+     */
     unwrapOr(this: Option<T>, def: T): T {
         switch (this.tag) {
             case Tag.Some: return this.val
@@ -195,6 +222,15 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Returns the contained value, if there is one, or returns the value returned by `def`.
+     *
+     * Unlike {@link OptionBase.unwrapOr}, the default value is hence lazily generated only in
+     * case there is no contained value.
+     *
+     * @param this
+     * @param def the function providing the default value
+     */
     unwrapOrElse(this: Option<T>, def: () => T): T {
         switch (this.tag) {
             case Tag.Some: return this.val
@@ -202,6 +238,15 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Returns the contained value, if there is one, or throws a {@link NoneError} exception with
+     * a custom error `msg`.
+     *
+     * @param this
+     * @param msg the error message provided with the thrown exception.
+     * @returns the contained value
+     * @throws {@link NoneError}, if `this` is a {@link None} variant.
+     */
     expect(this: Option<T>, msg: string): T | never {
         switch (this.tag) {
             case Tag.Some: return this.val
@@ -209,6 +254,12 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Flattens an `Option<Option<T>>` to an `Option<T>`, returning the inner {@link Option}, if
+     * there is one, or {@link None} otherwise.
+     *
+     * @param this
+     */
     flatten(this: Option<Option<T>>): Option<T> {
         switch (this.tag) {
             case Tag.Some: return this.val
@@ -216,6 +267,11 @@ abstract class OptionBase<T> {
         }
     }
 
+    /**
+     * Transposes an `Option` of a {@link Result} into a {@link Result} of an `Option`.
+     *
+     * @param this
+     */
     transpose<E>(this: Option<Result<T, E>>): Result<Option<T>, E> {
         switch (this.tag) {
             case Tag.Some:
@@ -232,7 +288,7 @@ abstract class OptionBase<T> {
 // Tag
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** The {@link Option} discriminant tag type.  */
+/** The {@link Option} discriminant tag type. */
 export const enum Tag { Some, None }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,6 +302,7 @@ export class Some<T> extends OptionBase<T> {
     /** The contained value. */
     readonly val: T
 
+    /** Returns a new {@link Some} instance containing the given `val`. */
     static from<T>(val: T): Some<T> {
         return new Some(val)
     }
@@ -266,13 +323,12 @@ export class None<T> extends OptionBase<T> {
     /** The discriminant tag. */
     readonly tag: Tag.None = Tag.None
 
+    /** Returns a new {@link None} instance. */
     static build(): None<never> {
         return new None()
     }
 
-    private constructor() {
-        super()
-    }
+    private constructor() { super() }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -293,12 +349,11 @@ export type Option<T> = Some<T> | None<T>
  * # Examples
  *
  * ```typescript
- * const some = Option.Some('string')
- * // prints `true`
- * console.log(some === Option.from('string))
- * const none: Option<string> = Option.None
- * // prints `true`
- * console.log(none === Option.from(null))
+ * // print `true`
+ * console.log(Option.Some('string').isSome()) // prints `true`
+ * console.log(Option.None.isNone())
+ * console.log(Option.from('string).isSome())
+ * console.log(Option.from(null).isNone())
  * ```
  */
 export const Option: {

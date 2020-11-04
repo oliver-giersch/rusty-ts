@@ -14,13 +14,6 @@ function arrayGet<T>(arr: T[], idx: number): T {
     return arr[idx]
 }
 
-const buildRes: (_: number | string) => Result<number, string> = (arg) => {
-    switch (typeof arg) {
-        case 'number': return Result.Ok(arg)
-        case 'string': return Result.Err(arg)
-    }
-}
-
 describe('module "option"', () => {
     it('testing "tryCatch"', () => {
         const arr = [0, 1, 2, 3, 4]
@@ -60,22 +53,22 @@ describe('module "option"', () => {
         }
     })
     it('testing "isOk"', () => {
-        expect(buildRes(100).isOk()).to.eq(true)
-        expect(buildRes('o').isOk()).to.eq(false)
+        expect(Result.Ok(100).isOk()).to.eq(true)
+        expect(Result.Err('o').isOk()).to.eq(false)
 
         // ensure that narrowing works as expected
-        const ok = buildRes(22)
+        const ok = Result.Ok(22)
         expect(ok.isOk()).to.eq(true)
         if (ok.isOk()) {
             expect(ok.val).to.eq(22)
         }
     })
     it('testing "isErr"', () => {
-        expect(buildRes(100).isErr()).to.eq(false)
-        expect(buildRes('o').isErr()).to.eq(true)
+        expect(Result.Ok(100).isErr()).to.eq(false)
+        expect(Result.Err('o').isErr()).to.eq(true)
 
         // ensure that narrowing works as expected
-        const err = buildRes('error')
+        const err = Result.Err('error')
         expect(err.isErr()).to.eq(true)
         if (err.isErr()) {
             expect(err.err).to.eq('error')
@@ -83,16 +76,18 @@ describe('module "option"', () => {
 
     })
     it('testing "match"', () => {
-        expect(buildRes(1).match(n => n, _ => 100)).to.eq(1)
-        expect(buildRes('error').match(n => n, _ => 100)).to.eq(100)
+        expect(Result.Ok(1).match(n => n, _ => 100)).to.eq(1)
+        expect(Result.Err('error').match(n => n, _ => 100)).to.eq(100)
     })
     it('testing "map"', () => {
-        expect(buildRes(1).map(n => n * 2)).to.deep.eq(Result.Ok(2))
-        expect(buildRes('bad').map(n => n * 2)).to.deep.eq(Result.Err('bad'))
+        expect(Result.Ok(1).map(n => n * 2)).to.deep.eq(Result.Ok(2))
+        const err: Result<number, string> = Result.Err('bad')
+        expect(err.map((n: number) => n * 2)).to.deep.eq(Result.Err('bad'))
     })
     it('testing "mapOr"', () => {
-        expect(buildRes(2).mapOr(100, n => n * 40)).to.eq(80)
-        expect(buildRes('err').mapOr(100, n => n * 40)).to.eq(100)
+        expect(Result.Ok(2).mapOr(100, n => n * 40)).to.eq(80)
+        const err: Result<number, string> = Result.Err('bad')
+        expect(err.mapOr(100, (n: number) => n * 40)).to.eq(100)
     })
     it('testing "and"', () => {
         expect(Result.Ok(20).and(Result.Ok('success'))).to.deep.eq(Result.Ok('success'))
@@ -105,10 +100,19 @@ describe('module "option"', () => {
             n => n < 10 ? Result.Ok('less than 10') : Result.Err(n)
         expect(Result.Ok(10).andThen(lessThanTen)).to.deep.eq(Result.Err(10))
         expect(Result.Ok(5).andThen(lessThanTen)).to.deep.eq(Result.Ok('less than 10'))
-        expect(Result.Err(Number.NaN).andThen(lessThanTen)).to.deep.eq(Result.Err(Number.NaN))
+        const err: Result<number, number> = Result.Err(Number.NaN)
+        expect(err.andThen(lessThanTen)).to.deep.eq(Result.Err(Number.NaN))
     })
     it('testing "unwrap"', () => {
         expect(Result.Ok(10).unwrap()).to.deep.eq(10)
         expect(() => Result.Err('bad').unwrap()).to.throw(UnwrapError)
+    })
+    it('testing "unwrapOr"', () => {
+        expect(Result.Ok(10).unwrapOr(100)).to.eq(10)
+        expect(Result.Err('err').unwrapOr(100)).to.eq(100)
+    })
+    it('testing "unwrapOrElse"', () => {
+        expect(Result.Ok(10).unwrapOrElse(() => 100)).to.eq(10)
+        expect(Result.Err('err').unwrapOrElse(() => 100)).to.eq(100)
     })
 })
