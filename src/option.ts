@@ -349,11 +349,10 @@ export type Option<T> = Some<T> | None<T>
  * # Examples
  *
  * ```typescript
- * // print `true`
  * console.log(Option.Some('string').isSome()) // prints `true`
- * console.log(Option.None.isNone())
- * console.log(Option.from('string).isSome())
- * console.log(Option.from(null).isNone())
+ * console.log(Option.None.isNone())           // print `true`
+ * console.log(Option.from('string).isSome())  // print `true`
+ * console.log(Option.from(null).isNone())     // print `false`
  * ```
  */
 export const Option: {
@@ -376,7 +375,9 @@ export const Option: {
      */
     from: <T>(val?: T | undefined | null) => Option<NonNullable<T>>
 } = Object.freeze({
-    Some<T>(val: T): Option<T> { return Some.from(val) },
+    Some<T>(val: T): Option<T> {
+        return Some.from(val)
+    },
     None: None.build(),
     from<T>(val?: T | undefined | null): Option<NonNullable<T>> {
         if (val !== undefined && val !== null) {
@@ -391,7 +392,7 @@ export const Option: {
 // NoneError
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Error that is thrown when an attempt to `unwrap` a`None` variant is made. */
+/** Error thrown when an attempt to `unwrap` a {@link None} variant is made. */
 export class NoneError extends Error {
     constructor(msg?: string) {
         super(msg ?? 'called `unwrap` on `Option.None` value')
