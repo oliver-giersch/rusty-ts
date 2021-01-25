@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "description": "Rust-like Option, Result types",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc",
-    "postinstall": "./node_modules/typescript/bin/tsc",
+    "build": "./node_modules/typescript/bin/tsc --declaration",
+    "postinstall": "yarn install && yarn build",
     "doc": "./node_modules/typedoc/bin/typedoc --out ./doc ./src",
     "test": "./node_modules/mocha/bin/mocha -r ts-node/register test/*.test.ts"
   },
@@ -24,7 +24,7 @@
     "chai": "^4.2.0",
     "mocha": "^8.2.1",
     "ts-node": "^9.0.0",
-    "typedoc": "^0.19.2",
+    "typedoc": "^0.20.18",
     "typescript": "^4.0.5"
   }
 }
