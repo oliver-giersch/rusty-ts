@@ -4,7 +4,6 @@
   "description": "Rust-like Option, Result types",
   "scripts": {
     "build": "./node_modules/typescript/bin/tsc --declaration",
-    "postinstall": "yarn install && yarn build",
     "doc": "./node_modules/typedoc/bin/typedoc --out ./doc ./src",
     "test": "./node_modules/mocha/bin/mocha -r ts-node/register test/*.test.ts"
   },
