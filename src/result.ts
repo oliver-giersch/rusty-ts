@@ -29,7 +29,7 @@ abstract class ResultBase<T, E> {
      *
      * @returns type guard determining, if `this` is an {@link Ok} variant
      */
-    isOk(this: Result<T, E>): this is Ok<T, never> {
+    isOk(this: Result<T, E>): this is Ok<T, E> {
         return this.tag === Tag.Ok
     }
 
@@ -53,7 +53,7 @@ abstract class ResultBase<T, E> {
      *
      * @returns type guard determining if `this` is an {@link Err} variant
      */
-    isErr(this: Result<T, E>): this is Err<never, E> {
+    isErr(this: Result<T, E>): this is Err<T, E> {
         return this.tag === Tag.Err
     }
 
