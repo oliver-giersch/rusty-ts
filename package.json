@@ -1,13 +1,14 @@
 {
   "name": "rusty-ts",
   "version": "0.0.1",
-  "description": "Rust-like Option, Result types",
+  "description": "Rustlike Option & Result types",
   "main": "./lib/lib.js",
   "types": "./lib/lib.d.ts",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc --declaration",
+    "build": "./node_modules/typescript/bin/tsc",
     "doc": "./node_modules/typedoc/bin/typedoc --out ./doc ./src",
-    "test": "./node_modules/mocha/bin/mocha -r ts-node/register test/*.test.ts"
+    "test": "./node_modules/mocha/bin/mocha -r ts-node/register test/*.test.ts",
+    "prepare": "yarn install && yarn build"
   },
   "repository": {
     "type": "git",
