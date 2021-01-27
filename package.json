@@ -8,7 +8,7 @@
     "build": "./node_modules/typescript/bin/tsc",
     "doc": "./node_modules/typedoc/bin/typedoc --out ./doc ./src",
     "test": "./node_modules/mocha/bin/mocha -r ts-node/register test/*.test.ts",
-    "prepare": "yarn install && yarn build"
+    "prepare": "yarn build"
   },
   "repository": {
     "type": "git",
